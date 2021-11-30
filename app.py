@@ -36,22 +36,7 @@ if not creds or not creds.valid:
 
 service = build('drive', 'v3', credentials=creds)
 
-
-def DownloadFile(filename_in_drive, outputname, path):
-    try:
-        file_id = CheckFileDir(filename_in_drive)
-        print(file_id)
-        request = service.files().export_media(fileId=file_id,
-                                               mimeType='image/jpeg')
-        fh = io.FileIO(path + outputname + '.xlsx', 'wb')
-        downloader = MediaIoBaseDownload(fh, request)
-        done = False
-        while done is False:
-            status, done = downloader.next_chunk()
-            print('Download %d%%.' % int(status.progress() * 100))
-        return fh
-    except Exception as e:
-        print('Error downloading file from Google Drive: %s' % e)
+ids = dict()
 
 
 def CheckFolder(FileName):
@@ -82,38 +67,57 @@ def CheckFolder(FileName):
                 return item['id']
 
 
+def getFilesName(FolderId, folderName):
+    page_token = None
+    while True:
+        if(folderName != "root"):
 
-def getFilesName(FolderId):
-    page_token = None
-    while True:
-        response = service.files().list(q="'"+FolderId+"' in parents and mimeType='image/jpeg'",
-                                              spaces='drive',
-                                              fields='nextPageToken, files(id, name)',
-                                              pageToken=page_token).execute()
+            response = service.files().list(q="'"+FolderId+"' in parents and mimeType='image/jpeg'",
+                                            spaces='drive',
+                                            fields='nextPageToken, files(id, name)',
+                                            pageToken=page_token).execute()
+        else:
+            response = service.files().list(q="mimeType='image/jpeg'",
+                                            spaces='drive',
+                                            fields='nextPageToken, files(id, name)',
+                                            pageToken=page_token).execute()
+
         for file in response.get('files', []):
+            #  save file name and id
+            ids[file['name']] = file['id']
             # Process change
-            print('Found file: %s (%s)' % (file.get('name'), file.get('id')))
+            print('Found file: %s (%s) - mime=%s' %
+                  (file.get('name'), file.get('id'), file.get('mimeType')))
         page_token = response.get('nextPageToken', None)
         if page_token is None:
             break
-def getImages():
-    page_token = None
-    while True:
-        response = service.files().list(q="mimeType='image/jpeg'",
-                                              spaces='drive',
-                                              fields='nextPageToken, files(id, name)',
-                                              pageToken=page_token).execute()
-        for file in response.get('files', []):
-            # Process change
-            print('Found file: %s (%s)' % (file.get('name'), file.get('id')))
-        page_token = response.get('nextPageToken', None)
-        if page_token is None:
-            break
+
+
+def DownloadFile(file_ids, path):
+    for file_name, file_id in file_ids.items():
+        try:
+            request = service.files().get_media(fileId=file_id)
+            # fh = io.BytesIO(path + file_id + '.jpg')
+            # fh = io.BytesIO(request.execute())
+            fh = io.FileIO(path + file_name, 'wb')
+            downloader = MediaIoBaseDownload(fh, request)
+            done = False
+            while done is False:
+                status, done = downloader.next_chunk()
+                print('Download %d%%.' % int(status.progress() * 100))
+
+        except Exception as e:
+            print('Error downloading file from Google Drive: %s' % e)
 
 
 if __name__ == '__main__':
-    folderName = 'test'
+    folderName = input('Enter folder name or \'root\' for root directory: ')
     folderId = CheckFolder(folderName)
     print(folderId)
-    # getImages()
-    getFilesName(folderId)
+    getFilesName(folderId, folderName)
+
+    download_path = './' + folderName + '/'
+    if not os.path.exists(download_path):
+        os.makedirs(download_path)
+    DownloadFile(ids, download_path)
+    print(ids)
