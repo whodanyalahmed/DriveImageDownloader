@@ -1,0 +1,16 @@
+google-api-core
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
+googleapis-common-protos
+httplib2
+idna
+oauthlib
+packagings
+selenium
+six
+uritemplate
+urllib3
+bs4
+lxml

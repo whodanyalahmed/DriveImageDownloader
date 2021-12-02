@@ -1,0 +1,12 @@
+
+Installation process:
+
+1 - Store all the files in a folder
+2 - install python from google
+3 - while installing must tick the "ADD to path" checkbox
+4 - run the command "pip install -r requirement.txt"
+5 - download the credential keys from google developer console and name it credentials.json in your project folder...
+6 - to run the script you should type "py app.py"
+
+it will run the script
+Thank you...
